@@ -1,3 +1,14 @@
+# Working folders
+/Data/
+/Notes/
+/Output/
+
+**/.DS_Store
+**/.docx
+
+# Virtual environment
+/python3/
+
 # History files
 .Rhistory
 .Rapp.history
