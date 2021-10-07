@@ -19,10 +19,10 @@ do_cleaning <- function(df) {
     #df[is.na(df[[var]]),df[[var]]] <- 0 # replaces NA's, so this doesn't kill R session
     df[[var]] <- df[[var]] / 60
   }
-  to_per_vars <-  c('MD.Workroom_perc', 'Supply.and.admin_perc','Patient.room_perc', 'Education_perc', 'staff.admin.area_perc','OTHER.UNKNOWN_perc', 'Family.waiting.space_perc','Transit_perc', 'Ward.Hall_perc')
-  for (var in to_per_vars) {
-    df[[var]] <- df[[var]] * 100
-  }
+  # to_per_vars <-  c('MD.Workroom_perc', 'Supply.and.admin_perc','Patient.room_perc', 'Education_perc', 'staff.admin.area_perc','OTHER.UNKNOWN_perc', 'Family.waiting.space_perc','Transit_perc', 'Ward.Hall_perc')
+  # for (var in to_per_vars) {
+  #   df[[var]] <- df[[var]] * 100
+  # }
   # exclusions
   df <- df[df$Total >= 240,] # takes all days with at least 4 hours of data
   df <- df[!(df$Service %in% c("ED")),]

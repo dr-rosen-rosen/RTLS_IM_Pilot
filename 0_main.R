@@ -50,23 +50,25 @@ i2 <- ggplot(data = df, aes(x = Day, y = Patient.room_perc, group =reorder(RTLS_
 
 s1 <- df %>%
   filter(Interval == 'all_24') %>%
-  ggplot(aes(x = Service_grouped, y = Patient.room)) +
+  ggplot(aes(x = Service_grouped, y = Patient.room_perc)) +
   geom_boxplot() +
-  labs(x = 'Service', y = 'Proportion of time spent in Patient Room', title = 'Proportion of time spent in patient room across services') +
+  labs(x = 'Service', y = 'Percent of time spent in Patient Room', title = 'Percent of time spent in patient room across services') +
   #coord_flip() +Thanks
   geom_boxplot(data = transform(df, Service_grouped = 'all')) +
-  theme_tufte()
+  theme_tufte() +
+  scale_y_continuous(labels = scales::percent_format())
 
 s2 <- df %>%
   filter(Interval == 'all_24') %>%
   ggplot(aes(x = Day, y = Patient.room_perc, group =Service_grouped)) + 
   geom_line(show.legend = FALSE) + 
   facet_wrap(~ Service_grouped) +
-  labs(x = 'Day', y = 'Proportion of time spent in Patient Room', title = 'Changes in the proportion of time spent at the bedside over the year, by service') +
+  labs(x = 'Day', y = 'Percent of time spent in Patient Room', title = 'Changes in the percent of time spent at the bedside over the year, by service') +
   geom_line(data = transform(df, Service_grouped = 'all')) +
   geom_smooth(method="lm") +
   theme_tufte() +
-  theme(axis.text.x = element_text(angle = 45, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+  scale_y_continuous(labels = scales::percent_format())
 (s1 / s2)
 
 # Time
