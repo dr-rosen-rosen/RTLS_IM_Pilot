@@ -12,17 +12,25 @@ hist(df$Patient.room_perc)
 #df$Patient.room_perc_scaled <- df$Patient.room_perc#scale(df$Patient.room_perc, center = TRUE, scale = TRUE)
 #hist(df$Patient.room_perc_scaled)
 
+M00 <- df %>%
+  filter(Interval == 'all_24') %>%
+  mutate(Patient.room_perc = scale(Patient.room_perc, center = TRUE, scale = TRUE)) %>%
+  lm(Patient.room_perc ~ 1, data = .)
+summary(M00)
+
 M0a <- df %>%
   filter(Interval == 'all_24') %>%
   mutate(Patient.room_perc = scale(Patient.room_perc, center = TRUE, scale = TRUE)) %>%
-  lmer(Patient.room_perc ~ 1 + (1|RTLS_ID) + (1|Service_grouped), ., REML = FALSE)
+  lmer(Patient.room_perc ~ 1 + (1|RTLS_ID), ., REML = FALSE)
 summary(M0a)
+anova(M0a, M00)
 sjPlot::plot_model(M0a)
+
 
 M0b <- df %>%
   filter(Interval == 'all_24') %>%
   mutate(Patient.room_perc = scale(Patient.room_perc, center = TRUE, scale = TRUE)) %>%
-  lmer(Patient.room_perc ~ 1 + (1|Service_grouped), ., REML = FALSE)
+  lmer(Patient.room_perc ~ 1 + (1|RTLS_ID) + (1|Service_grouped), ., REML = FALSE)
 summary(M0b)
 anova(M0a,M0b)
 
@@ -48,8 +56,8 @@ lattice::qqmath(M1b)
 
 M2a <- df %>%
   filter(Interval == 'all_24') %>%
-  #mutate(Patient.room_perc = scale(Patient.room_perc, center = TRUE, scale = TRUE)) %>%
-  lmer(Patient.room_perc ~ numDays + Service_numDays + DayOfWeek + (1|RTLS_ID) + (1|Service_grouped), ., REML = FALSE)
+  mutate(Patient.room_perc = scale(Patient.room_perc, center = TRUE, scale = TRUE)) %>%
+  lmer(Patient.room_perc ~ numDays + Service_numDays + DayOfWeek + (1|RTLS_ID) + (1|Service_grouped), ., REML = FALSE)   
 anova(M1b,M2a)
 summary(M2a)
 sjPlot::plot_model(M2a, sort.est = TRUE)
@@ -104,7 +112,11 @@ sjPlot::tab_model(M.R.2a)
 lattice::qqmath(M.R.2a)
 
 sjPlot::tab_model(M0a,M1a,M1b,M2a, file = here('output','tables','Model_table.html'))
-
+summary(M2a)
+anova(M0a,M00)
+anova(M0b,M0a)
+anova(M2a,M0b)
+sjPlot::tab_model(M00,M0a,M0b,M2a, file = here('output','tables','Model_table_V2.html'))
 
 df %>%
   filter(Interval == 'rounds') %>%

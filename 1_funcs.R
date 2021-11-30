@@ -13,7 +13,7 @@ do_cleaning <- function(df) {
   for (var in fac_vars) {
     df[[var]] <- as.factor(df[[var]])
   }
-  df$Interval <- ordered(df$Interval, levels = c('all_24', 'morning', 'afternoon', 'evening', 'night', 'rounds'))
+  df$Interval <- ordered(df$Interval, levels = c('all_24', 'rounds', 'morning', 'afternoon', 'evening', 'night'))
   df$Month <- ordered(df$Month, levels = c(7,8,9,10,11,12,1,2,3,4,5,6))
   to_min_vars <- c('MD.Workroom', 'Supply.and.admin','Patient.room', 'Education', 'staff.admin.area','OTHER.UNKNOWN', 'Family.waiting.space','Transit', 'Ward.Hall', 'Total')
   for (var in to_min_vars) {
@@ -25,16 +25,16 @@ do_cleaning <- function(df) {
     c('MD.Workroom_perc', 'Supply.and.admin_perc','Patient.room_perc', 'Education_perc', 'staff.admin.area_perc','OTHER.UNKNOWN_perc', 'Family.waiting.space_perc','Transit_perc', 'Ward.Hall_perc')
   )
   # exclusions
-  # df <- df[df$Total >= 240,] # takes all days with at least 4 hours of data
+  #df <- df[df$Total >= 240,] # takes all days with at least 4 hours of data
   shorties <- c(308419,308762,308775,308779,308784,308779,308784,308785,308786,308795,308796,308797)
   df <- df[!df$RTLS_ID %in% shorties,]
-  big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
+  #big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
   df <- df %>%
-    # filter( 
-    #   (Interval %in% big_intervals & Total >= 240) | (Interval == 'rounds' & Total >= 120)
-    #   ) %>% 
+    filter(
+      (Interval %in% big_intervals & Total >= 240) | (Interval == 'rounds' & Total >= 120)
+      ) %>%
     mutate(
-      across(to_replace_na_vars, ~tidyr::replace_na(.x, 0))
+      across(all_of(to_replace_na_vars), ~tidyr::replace_na(.x, 0))
     )
   return(df)
 }
@@ -68,7 +68,8 @@ get_stacked_bars <- function(df){
     ggplot(aes(fill = location, x = Interval, y = minutes)) +
     geom_bar(position = 'fill', stat = 'identity') +
     theme_tufte() +
-    scale_fill_viridis(discrete = TRUE, direction = -1, option = 'D') +
+    scale_fill_viridis(name='Location',discrete = TRUE, direction = -1, option = 'D',labels=c('Patient room','MD Workroom', 'Ward Hall', 'Other / Unknown','Staff area', 'Transit', 'Education', 'Supply and admin', 'Family waiting space')) +
+    scale_x_discrete(labels=c('24 hours', 'Rounds', 'Morning', 'Afternoon', 'Evening', 'Night')) +
     theme(axis.text.x = element_text(angle = 45, hjust=1)) +
     labs(title = 'All days') +
     ylab('Proportion of time') +
@@ -85,7 +86,8 @@ get_stacked_bars <- function(df){
     ggplot(aes(fill = location, x = Interval, y = minutes)) +
     geom_bar(position = 'fill', stat = 'identity') +
     theme_tufte()+
-    scale_fill_viridis(discrete = TRUE, direction = -1, option = 'D') +
+    scale_fill_viridis(name='Location',discrete = TRUE, direction = -1, option = 'D',labels=c('Patient room','MD Workroom', 'Ward Hall', 'Other / Unknown','Staff area', 'Transit', 'Education', 'Supply and admin', 'Family waiting space')) +
+    scale_x_discrete(labels=c('24 hours', 'Rounds', 'Morning', 'Afternoon', 'Evening', 'Night')) +
     theme(axis.text.x = element_text(angle = 45, hjust=1)) +
     labs(title = 'Week days') +
     ylab('Proportion of time') +
@@ -102,7 +104,9 @@ get_stacked_bars <- function(df){
     ggplot(aes(fill = location, x = Interval, y = minutes)) +
     geom_bar(position = 'fill', stat = 'identity') +
     theme_tufte()+
-    scale_fill_viridis(discrete = TRUE, direction = -1, option = 'D') +
+    scale_fill_viridis(name='Location',discrete = TRUE, direction = -1, option = 'D',labels=c('Patient room','MD Workroom', 'Ward Hall', 'Other / Unknown','Staff area', 'Transit', 'Education', 'Supply and admin', 'Family waiting space')) +
+    scale_x_discrete(labels=c('24 hours', 'Rounds', 'Morning', 'Afternoon', 'Evening', 'Night')) +
+    #scale_fill_discrete(labels=c('Patient room','MD Workroom', 'Ward Hall', 'Other / Unknow','Staff area', 'Transit', 'Education', 'Supply and admin', 'Family waiting space')) +  
     theme(axis.text.x = element_text(angle = 45, hjust=1)) +
     labs(title = 'Weekend days') +
     ylab('Proportion of time') +
@@ -110,9 +114,9 @@ get_stacked_bars <- function(df){
     xlab('Time of day')
   p = p1 + p2 + p3 +
     plot_annotation(
-      title = 'Percentage of time spent in locations by time of day and days of the week',
+      #title = 'Percentage of time spent in locations by time of day and days of the week',
       #subtitle = 'These 3 plots will reveal yet-untold secrets about our beloved data-set',
-      caption = 'Time ranges:\nMoring: 6AM to 12PM\nAfternoon: 12PM to 6PM \nEvening: 6PM to 12AM\nNight: 12AM to 6 AM\nRounds: 830AM to 11AM',
+      caption = 'Time ranges:\nMoring: 6AM to 12PM\nRounds: 830AM to 11AM\nAfternoon: 12PM to 6PM \nEvening: 6PM to 12AM\nNight: 12AM to 6 AM',
       tag_levels = 'A'
     ) +
     plot_layout(guides='collect') & theme(legend.position = 'bottom', text = element_text('serif')) 
@@ -125,15 +129,53 @@ get_individual_plots<- function(df) {
     filter(Interval == 'all_24') %>%
     ggplot(aes(x = reorder(RTLS_ID, Patient.room_perc, na.rm = TRUE), y = Patient.room_perc)) +#fct_reorder(RTLS_ID, Patient.room_perc, .fun = median, .desc =TRUE), y = Patient.room_perc)) + #reorder(RTLS_ID, Patient.room_perc, FUN = min), y = Patient.room_perc)) +
     geom_boxplot() +
-    labs(x = 'Intern', y = 'Proportion of time spent in Patient Room', title = 'Percent time spent \nat bedside by Intern') +
+    labs(x = 'Intern', y = '% of time in Patient Room', title = '% time in Patient rooms over\n24 hour period by Intern') +
     coord_flip() +
+    scale_y_continuous(labels = scales::percent_format()) +
     theme_tufte() +
     theme(#axis.title.x=element_blank(),
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank()
     )
+  summ_data <- df %>%
+    filter(Interval == 'all_24') %>%
+    group_by(RTLS_ID) %>%
+    summarise(Total.hours = sum(Patient.room) / 60, n = n()) %>%
+    ungroup() 
+  mean_25 <- summ_data %>%
+    filter(Total.hours < quantile(Total.hours,.25)) %>%
+    pull(Total.hours) %>%
+    mean()
+  mean_75 <- summ_data %>%
+    filter(Total.hours < quantile(Total.hours,.75)) %>%
+    pull(Total.hours) %>%
+    mean()
+  annotations <- data.frame(
+    xpos = c(15),
+    ypos =  c(900),
+    annotateText = c(paste0("On average, there is a difference of\n",round((mean_75 - mean_25),1)," hours spent in Patient Rooms\nbetweeen the top and bottom \nquartiles of interns")),
+    tsize = 8,
+    hjustvar = c(0),
+    vjustvar = c(1.5)) #<- adjust
   
-  i2 <- df %>%
+  i2 <- summ_data %>%  ggplot(aes(x = reorder(RTLS_ID, Total.hours, na.rm = TRUE), y = Total.hours)) +#fct_reorder(RTLS_ID, Patient.room_perc, .fun = median, .desc =TRUE), y = Patient.room_perc)) + #reorder(RTLS_ID, Patient.room_perc, FUN = min), y = Patient.room_perc)) +
+    geom_point() +
+    labs(x = 'Intern', y = 'Total hours in Patient rooms ', title = 'Total time in Patient rooms over one year\nby Intern') +
+    coord_flip() +
+    ylim(round(min(summ_data$Total.hours),100),plyr::round_any(max(summ_data$Total.hours),100, f = ceiling)) +
+    #scale_y_continuous(labels = scales::percent_format()) +
+    theme_tufte() +
+    geom_hline(aes(yintercept = quantile(Total.hours)[[2]]), linetype="dotted") +
+    geom_hline(aes(yintercept = quantile(Total.hours)[[4]]), linetype="dotted") +
+    #guides(linetype = "none") +
+    theme(#axis.title.x=element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.key = element_blank()
+    )# +
+    #geom_label(data=annotations,aes(x=xpos,y=ypos,hjust=hjustvar,vjust=vjustvar,label=annotateText),size = 3)
+  
+  i3 <- df %>%
     filter(Interval == 'all_24') %>%
     ggplot(aes(x = Day, y = Patient.room_perc, group =reorder(RTLS_ID, Patient.room_perc, na.rm = TRUE))) + #Patient.room_perc
     geom_line(show.legend = FALSE) +
@@ -146,9 +188,13 @@ get_individual_plots<- function(df) {
       strip.text.x = element_blank()
     ) +
     theme(axis.text.x = element_text(angle = 45, hjust=1))
-  
-  i_combined <- (i1 + i2)
-  return(i_combined)
+
+  # i_combined <- (i1 + i2)
+  return(list(percent = i1, total_time = i2, over_time = i3))
+}
+
+print_key_stats <- function(df){
+  print(paste('Total intern hours:',sum(df[which(df$Interval == 'all_24'),'Total'])/60))
 }
 
 get_service_plots <- function(df) {
@@ -156,86 +202,123 @@ get_service_plots <- function(df) {
     filter(Interval == 'all_24') %>%
     ggplot(aes(x = Service_grouped, y = Patient.room_perc)) +
     geom_boxplot() +
-    labs(x = 'Service', y = 'Percent of time spent in Patient Room', title = 'Percent of time spent in patient room across services') +
+    labs(
+      x = 'Service', 
+      y = '% time in Patient room', 
+      title = '% time in Patient room over \n24 hour period by service') +
     #coord_flip() +
-    geom_boxplot(data = transform(df[which(df$Interval == 'all_24'),], Service_grouped = 'all')) +
+    #geom_boxplot(data = transform(df[which(df$Interval == 'all_24'),], Service_grouped = 'all')) +
     theme_tufte() +
+    theme(
+          axis.text.x = element_text(angle = 45, hjust=1)) +
     scale_y_continuous(labels = scales::percent_format())
-  
   s2 <- df %>%
-    filter(Interval == 'all_24') %>%
-    ggplot(aes(x = Day, y = Patient.room_perc, group = Service_grouped)) + 
-    geom_line(show.legend = FALSE) + 
-    facet_wrap(~ Service_grouped) +
-    labs(x = 'Day', y = 'Percent of time spent in Patient Room', title = 'Changes in the percent of time spent at the bedside over the year, by service') +
-    geom_line(data = transform(df[which(df$Interval == 'all_24'),], Service_grouped = 'all')) +
-    geom_smooth(method="lm") +
+    filter(Interval == 'rounds') %>%
+    #filter(Service_grouped %in% c('ICU', 'House staff')) %>%
+    select(Service_grouped, Patient.room_perc, Ward.Hall_perc) %>%
+    tidyr::pivot_longer(cols = !Service_grouped, names_to = "location", values_to = "perc_time") %>%
+    tidyr::drop_na() %>%
+    ggplot(aes(x = Service_grouped, y = perc_time, fill = location)) +
+    geom_boxplot() +
     theme_tufte() +
-    theme(axis.text.x = element_text(angle = 45, hjust=1)) +
-    scale_y_continuous(labels = scales::percent_format())
-  s_combined <- (s1 / s2)
-  return(s_combined)
+    theme(
+      legend.position="bottom",
+      axis.text.x = element_text(angle = 45, hjust=1)) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    scale_fill_discrete(labels = c("Patient room", "Ward hall")) +
+    labs(
+      x = 'Service',
+      y = '% time in location',
+      fill = 'Location',
+      title = '% time in Patient rooms and Ward halls\nduring rounds by service')
+  #scale_fill_viridis(discrete = TRUE, option = 'G')
+  
+  # s2 <- df %>%
+  #   filter(Interval == 'all_24') %>%
+  #   ggplot(aes(x = Day, y = Patient.room_perc, group = Service_grouped)) + 
+  #   geom_line(show.legend = FALSE) + 
+  #   facet_wrap(~ Service_grouped) +
+  #   labs(x = 'Day', y = 'Percent of time spent in Patient Room', title = 'Changes in the percent of time spent at the bedside over the year, by service') +
+  #   geom_line(data = transform(df[which(df$Interval == 'all_24'),], Service_grouped = 'all')) +
+  #   geom_smooth(method="lm") +
+  #   theme_tufte() +
+  #   theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+  #   scale_y_continuous(labels = scales::percent_format())
+  #s_combined <- (s1 / s2)
+  return(list(overeall = s1, rounds = s2))
 }
 
+
+get_monster_plot <- function(ind_plots,serv_plots){
+  combineed_plot <- (ind_plots$percent + ind_plots$total_time)/(serv_plots$overeall + serv_plots$rounds) +
+    plot_layout(heights = c(3,1)) +
+    plot_annotation(
+      #title = 'Percent time by intern and service',
+      tag_levels = 'A'
+    )
+  return(combineed_plot)
+}
 make_tables <- function(df) {
+  locations <- c('Patient.room','MD.Workroom', 'Ward.Hall', 'OTHER.UNKNOWN','staff.admin.area', 'Transit', 'Education', 'Supply.and.admin', 'Family.waiting.space','Total')
+  df_sub <- df[,append(c('Interval','DayOfWeek'),locations)]
   # Weekdays & Weekends together
-  stargazer(df[df$Interval == 'all_24',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'all_24',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_OverallTable.doc"))
-  stargazer(df[df$Interval == 'morning',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'morning',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_morning_Table.doc"))
-  stargazer(df[df$Interval == 'afternoon',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'afternoon',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_afternoon_Table.doc"))
-  stargazer(df[df$Interval == 'evening',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'evening',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_evening_Table.doc"))
-  stargazer(df[df$Interval == 'night',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'night',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_night_Table.doc"))
-  stargazer(df[df$Interval == 'rounds',], type = 'html',
+  stargazer(df_sub[df_sub$Interval == 'rounds',], type = 'html',
             digits = 1,
             out = here('output','tables',"Overall_rounds_Table.doc"))
   
   # Weekdays only
-  stargazer(df[(df$Interval == 'all_24') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'all_24') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_OverallTable.doc"))
-  stargazer(df[(df$Interval == 'morning') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'morning') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_morning_Table.doc"))
-  stargazer(df[(df$Interval == 'afternoon') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'afternoon') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_afternoon_Table.doc"))
-  stargazer(df[(df$Interval == 'evening') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'evening') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_evening_Table.doc"))
-  stargazer(df[(df$Interval == 'night') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'night') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_night_Table.doc"))
-  stargazer(df[(df$Interval == 'rounds') & (df$DayOfWeek < 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'rounds') & (df_sub$DayOfWeek < 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekdays_rounds_Table.doc"))
   
   # Weekends only
   
-  stargazer(df[(df$Interval == 'all_24') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'all_24') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_OverallTable.doc"))
-  stargazer(df[(df$Interval == 'morning') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'morning') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_morning_Table.doc"))
-  stargazer(df[(df$Interval == 'afternoon') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'afternoon') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_afternoon_Table.doc"))
-  stargazer(df[(df$Interval == 'evening') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'evening') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_evening_Table.doc"))
-  stargazer(df[(df$Interval == 'night') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'night') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_night_Table.doc"))
-  stargazer(df[(df$Interval == 'rounds') & (df$DayOfWeek >= 5),], type = 'html',
+  stargazer(df_sub[(df_sub$Interval == 'rounds') & (df_sub$DayOfWeek >= 5),], type = 'html',
             digits = 1,
             out = here('output','tables',"Weekend_rounds_Table.doc"))
   NULL
