@@ -22,6 +22,27 @@ df <- read.csv(here('data','IndLongByInterval_03112021.csv')) %>%
     read.csv(here('data','IndLongByInterval_2021-10-08.csv')) # add rounds
   ) %>%
   do_cleaning()
+
+# ### Looking at 'shorties'
+# overall_amt <- df %>%
+#   filter(Interval == 'all_24') %>%
+#   group_by(RTLS_ID) %>%
+#   summarize(
+#     total = sum(Total), 
+#     count = n(), 
+#     avg = mean(Total),
+#     avg_pt_rm_per = mean(Patient.room_perc))
+
+
+# ### Looking at rounds
+# big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
+# count(df[which(df$Interval == 'rounds'),])
+# df <- df %>%
+#   filter(
+#     (Interval == 'rounds' & Total < 120))
+# mean(df[which(df$Interval == 'rounds'),'Total'])
+
+
 skimr::skim(df)
 
 get_histograms(df, interval = 'rounds', variable = 'Patient.room_perc')

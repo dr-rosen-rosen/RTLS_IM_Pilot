@@ -7,10 +7,10 @@ library(lattice)
 
 detach("package:lattice", unload=TRUE)
 hist(df$Patient.room_perc)
-# df <- df %>%
-#   filter(Interval == 'all_24')
-#df$Patient.room_perc_scaled <- df$Patient.room_perc#scale(df$Patient.room_perc, center = TRUE, scale = TRUE)
-#hist(df$Patient.room_perc_scaled)
+df <- df %>%
+  filter(Interval == 'all_24')
+df$Patient.room_perc_scaled <- df$Patient.room_perc#scale(df$Patient.room_perc, center = TRUE, scale = TRUE)
+hist(df$Patient.room_perc_scaled)
 
 M00 <- df %>%
   filter(Interval == 'all_24') %>%

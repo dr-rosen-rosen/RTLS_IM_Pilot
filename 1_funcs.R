@@ -26,12 +26,12 @@ do_cleaning <- function(df) {
   )
   # exclusions
   #df <- df[df$Total >= 240,] # takes all days with at least 4 hours of data
-  shorties <- c(308419,308762,308775,308779,308784,308779,308784,308785,308786,308795,308796,308797)
+  shorties <- c(308775)
   df <- df[!df$RTLS_ID %in% shorties,]
-  #big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
+  big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
   df <- df %>%
     filter(
-      (Interval %in% big_intervals & Total >= 240) | (Interval == 'rounds' & Total >= 120)
+      (Interval %in% big_intervals & Total >= 240) | (Interval == 'rounds' & Total >= 60)
       ) %>%
     mutate(
       across(all_of(to_replace_na_vars), ~tidyr::replace_na(.x, 0))
@@ -123,7 +123,7 @@ get_stacked_bars <- function(df){
   return(p)
 }
 
-get_individual_plots<- function(df) {
+get_individual_plots <- function(df) {
   
   i1 <- df %>%
     filter(Interval == 'all_24') %>%
@@ -215,8 +215,9 @@ get_service_plots <- function(df) {
   s2 <- df %>%
     filter(Interval == 'rounds') %>%
     #filter(Service_grouped %in% c('ICU', 'House staff')) %>%
-    select(Service_grouped, Patient.room_perc, Ward.Hall_perc) %>%
+    select(Service_grouped, Patient.room_perc, Ward.Hall_perc, MD.Workroom_perc) %>%
     tidyr::pivot_longer(cols = !Service_grouped, names_to = "location", values_to = "perc_time") %>%
+    mutate(location = fct_relevel(location, "Patient.room_perc", "Ward.Hall_perc", "MD.Workroom_perc")) %>%
     tidyr::drop_na() %>%
     ggplot(aes(x = Service_grouped, y = perc_time, fill = location)) +
     geom_boxplot() +
@@ -225,12 +226,12 @@ get_service_plots <- function(df) {
       legend.position="bottom",
       axis.text.x = element_text(angle = 45, hjust=1)) +
     scale_y_continuous(labels = scales::percent_format()) +
-    scale_fill_discrete(labels = c("Patient room", "Ward hall")) +
+    scale_fill_discrete(labels = c("Patient room", "Ward hall", "MD workroom")) +
     labs(
       x = 'Service',
       y = '% time in location',
       fill = 'Location',
-      title = '% time in Patient rooms and Ward halls\nduring rounds by service')
+      title = '% time in Patient rooms, Ward halls and\nMD workrooms during rounds by service')
   #scale_fill_viridis(discrete = TRUE, option = 'G')
   
   # s2 <- df %>%

@@ -7,6 +7,9 @@
 **/.docx
 
 *.pdf
+*.csv
+*.xlsx
+*.jpeg
 
 # Virtual environment
 /python3/
