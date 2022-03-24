@@ -14,6 +14,7 @@ library(viridis)
 library(skimr)
 library(officer)
 library(flextable)
+library(lemon)
 
 source('1_funcs.R')
 
@@ -23,36 +24,16 @@ df <- read.csv(here('data','IndLongByInterval_03112021.csv')) %>%
   ) %>%
   do_cleaning()
 
-# ### Looking at 'shorties'
-# overall_amt <- df %>%
-#   filter(Interval == 'all_24') %>%
-#   group_by(RTLS_ID) %>%
-#   summarize(
-#     total = sum(Total), 
-#     count = n(), 
-#     avg = mean(Total),
-#     avg_pt_rm_per = mean(Patient.room_perc))
-
-
-# ### Looking at rounds
-# big_intervals <- c('all_24', 'morning', 'afternoon', 'evening', 'night')
-# count(df[which(df$Interval == 'rounds'),])
-# df <- df %>%
-#   filter(
-#     (Interval == 'rounds' & Total < 120))
-# mean(df[which(df$Interval == 'rounds'),'Total'])
-
-
 skimr::skim(df)
 
 get_histograms(df, interval = 'rounds', variable = 'Patient.room_perc')
 print_key_stats(df)
 make_tables(df)
 get_stacked_bars(df)
-get_monster_plot(
-  ind_plots = get_individual_plots(df),
-  serv_plots = get_service_plots(df)
-)
+get_stacked_barsV2(df) %>% ggsave(., file = 'Figure1.eps',device = cairo_ps)
+x <- get_individual_plots(df)
+y <- get_service_plots(df)
+show(y)
 
 #### Table for individuals
 table_df <- df %>%
@@ -138,6 +119,55 @@ ft <- flextable(data = table_df) %>%
 ft
 #save_as_docx(ft, path = here('output','tables','individual_descriptives.docx'))
 
+library(gtsummary)
+library(officer)
+df %>%
+  filter(Interval %in% c('all_24','rounds')) %>%
+  droplevels() %>%
+  mutate(Interval = recode(Interval, all_24 = '24 hours', rounds = 'Rounds')) %>%
+  select(Patient.room_perc, Ward.Hall_perc, MD.Workroom_perc,Service_grouped, Interval) %>% 
+  mutate(across(c(Patient.room_perc, Ward.Hall_perc, MD.Workroom_perc), ~ .x*100)) %>%
+  tidyr::pivot_longer(-c(Interval,Service_grouped), names_to = "Location", values_to = "perc_time") %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = Service_grouped, values_from = perc_time) %>%
+  select(-row) %>%
+  mutate(Location = recode(Location, Patient.room_perc = 'Patient room', Ward.Hall_perc = 'Ward Hall', MD.Workroom_perc = 'MD Workroom')) %>%
+  mutate(Location = ordered(Location, levels = c('Patient room', 'Ward Hall', 'MD Workroom'))) %>%
+  tbl_strata(
+    strata = Location,
+    .tbl_fun = 
+      ~ .x %>% 
+      tbl_summary(
+        by = Interval, 
+        missing = "no",
+        statistic = list(all_continuous() ~ "{mean}% ({sd})"),
+        digits = all_continuous() ~ 1
+        #list(Patient.room_perc ~ "Patient room", Ward.Hall_perc ~ "Ward Hall", MD.Workroom_perc ~ 'MD Workroom')
+        ) %>%
+      #add_p() %>%
+      modify_header(
+        update = list(
+          label ~ "**Service**"#,
+          #p.value ~ "**P**"
+        )
+      )
+  ) %>%
+  # as_gt() %>%
+  # gt::gtsave("service_descriptives.pdf", 
+  #            path = here('output','tables'))
+  as_flex_table() %>%
+  save_as_docx(., 
+               path = here('output','tables','service_descriptives.docx'),
+               pr_section = officer::prop_section(
+                 page_size = page_size(orient = "landscape"),
+                 type = "continuous",
+                 page_margins = page_mar()
+                )
+               )
+
+    
+df %>%
+  tidyr::pivot_longer(Patient.room_perc, Ward.Hall_perc, MD.Workroom_perc, names_to = "Location", values_to = "perc_time")
   
 
 
